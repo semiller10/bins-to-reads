@@ -62,7 +62,7 @@ def main():
                 else:
                     mapped_reads.append(line.rstrip())
         pe_reads = remove_unpaired_reads(mapped_reads)
-        with open(args.out, 'w') as handle:
+        with open(args.out, 'a') as handle:
             for line in pe_reads:
                 if line[0] == '>':
                     handle.write(line + hdr_suffix)
