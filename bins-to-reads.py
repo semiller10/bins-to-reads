@@ -41,13 +41,66 @@ def main():
 
         contig_db_name = os.path.splitext(os.path.basename(row['contig_db']))
         hdr_suffix = '_' + contig_db_name + '\n'
-        with open(tmp_out) as handle:
-            read_hdrs = [hdr.replace(hdr_suffix, '') for hdr in handle.readlines()[::2]]        
-        missing_read_hdrs = determine_missing_reads(read_hdrs)
+        # WHEN ONLY ONE PAIRED-END READ MAPS TO THE CONTIG, 
+        # RECOVER THE OTHER READ
+        # CURRENTLY IN DEVELOPMENT: REQUIRES READS FILE
+        # with open(tmp_out) as handle:
+        #     read_hdrs = [hdr.replace(hdr_suffix, '') for hdr in handle.readlines()[::2]]        
+        # missing_read_hdrs = determine_missing_reads(read_hdrs)
 
-        
+        # PAIRED-END READS CAN ALSO BE DISCARDED 
+        # WHEN ONE READ DOES NOT MAP TO A CONTIG
+        # TO ENSURE OUTPUT ENTIRELY OF P-E READS
+        with open(tmp_out) as handle:
+            mapped_reads = []
+            for line in handle.readlines():
+                if line[0] == '>':
+                    mapped_reads.append(line.rstrip().replace(hdr_suffix, ''))
+                else:
+                    mapped_reads.append(line.rstrip())
+        pe_reads = remove_unpaired_reads(mapped_reads, hdr_suffix)
+        with open(args.out, 'w') as handle:
+            for line in pe_reads:
+                handle.write(line + '_' + hdr_suffix + '\n')
+
+    subprocess.call(['rm', tmp_out])
 
     return
+
+def remove_unpaired_reads(reads):
+    '''
+    Remove unpaired reads from a sorted fasta file
+    '''
+
+    pe_reads = []
+    paired = False
+    prev_hdr = reads[0]
+    prev_basename = prev_hdr[:-2]
+    prev_seq = reads[1]
+    for line in reads[2:]:
+        if line[0] == '>':
+            if paired:
+                prev_hdr = line
+                prev_basename = prev_hdr[:-2]
+                paired = False
+            else:
+                if line[:-2] == prev_basename:
+                    paired = True
+                    curr_hdr = line
+                else:
+                    prev_hdr = line
+                    prev_basename = prev_hdr[:-2]
+        else:
+            if paired:
+                pe_reads.append(prev_hdr)
+                pe_reads.append(prev_seq)
+                pe_reads.append(curr_hdr)
+                pe_reads.append(line)
+                paired = False
+            else:
+                prev_seq = line
+
+    return pe_reads
 
 def determine_missing_reads(read_hdrs):
     '''
