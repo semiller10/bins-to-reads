@@ -13,20 +13,31 @@ def main():
 
     bin_table_hdr = ['bin', 'collection', 'profile_db', 'contig_db', 'bam']
     table = pd.read_csv(args.table, sep='\t', header=None, names=bin_table_hdr)
+
     out_dir = os.path.dirname(args.out)
     out_name = os.path.splitext(os.path.basename(args.out))[0]
     for i, row in table.iterrows():
         tmp_out = os.path.join(
             out_dir, out_name + '.bin' + str(i) + '.' + row['bin'] + '.tmp.fasta'
         )
-        subprocess.call(
+        subprocess.call([
             'anvi-get-short-reads-from-bam', 
             '-p', row['profile_db'], 
             '-c', row['contig_db'], 
             '-C', row['collection'], 
             '-b', row['bin'], 
             '-o', tmp_out
+        ])
+
+        tmp_out_1 = os.path.join(
+            os.path.dirname(tmp_out), 
+            os.path.splitext(os.path.basename(tmp_out))[0] + '.sorted.fasta'
         )
+        subprocess.call(
+            ['seqkit', 'sort', tmp_out], 
+            stdout=tmp_out_1
+        )
+        subprocess.call(['mv', tmp_out_1, tmp_out])
 
     return
 
