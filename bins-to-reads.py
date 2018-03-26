@@ -43,7 +43,9 @@ def main():
         hdr_suffix = '_' + contig_db_name + '\n'
         with open(tmp_out) as handle:
             read_hdrs = [hdr.replace(hdr_suffix, '') for hdr in handle.readlines()[::2]]        
-        missing_reads = determine_missing_reads(read_hdrs)
+        missing_read_hdrs = determine_missing_reads(read_hdrs)
+
+        
 
     return
 
@@ -59,13 +61,13 @@ def determine_missing_reads(read_hdrs):
     previous_member = previous_hdr[-1]
     for hdr in read_hdrs[1:]:
         if unpaired:
-            if hdr[:-2] != previous_basename:
-                if previous_member == '1':
-                    missing_reads.append(previous_basename + '.2\n')
-                else:
-                    missing_reads.append(previous_basename + '.1\n')
-            else:
+            if hdr[:-2] == previous_basename:
                 unpaired = False
+            else:
+                if previous_member == '1':
+                    missing_read_hdrs.append(previous_basename + '.2\n')
+                else:
+                    missing_read_hdrs.append(previous_basename + '.1\n')
         else:
             unpaired = True
             previous_hdr = read_hdrs[0]
