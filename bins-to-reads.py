@@ -69,7 +69,7 @@ def main():
                 else:
                     handle.write(line + '\n')
 
-    subprocess.call(['rm', tmp_out])
+        subprocess.call(['rm', tmp_out])
 
     return
 
