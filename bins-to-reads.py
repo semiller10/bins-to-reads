@@ -61,7 +61,7 @@ def main():
                     mapped_reads.append(line.replace(hdr_suffix, ''))
                 else:
                     mapped_reads.append(line.rstrip())
-        pe_reads = remove_unpaired_reads(mapped_reads)
+        pe_reads = remove_unpaired_reads(mapped_reads, args.min)
         with open(args.out, 'a') as handle:
             for line in pe_reads:
                 if line[0] == '>':
@@ -73,7 +73,7 @@ def main():
 
     return
 
-def remove_unpaired_reads(reads):
+def remove_unpaired_reads(reads, min):
     '''
     Remove unpaired reads from a sorted fasta file
     '''
@@ -98,11 +98,12 @@ def remove_unpaired_reads(reads):
                     prev_basename = prev_hdr[:-2]
         else:
             if paired:
-                pe_reads.append(prev_hdr)
-                pe_reads.append(prev_seq)
-                pe_reads.append(curr_hdr)
-                pe_reads.append(line)
-                paired = False
+                if len(prev_seq) >= min and len(line) >= min:
+                    pe_reads.append(prev_hdr)
+                    pe_reads.append(prev_seq)
+                    pe_reads.append(curr_hdr)
+                    pe_reads.append(line)
+                    paired = False
             else:
                 prev_seq = line
 
@@ -166,6 +167,12 @@ def get_args():
         )
     )
     parser.add_argument('-o', '--out', help='Path to fasta file output')
+    parser.add_argument(
+        '-m', 
+        '--min', 
+        default=77, 
+        help='Minimum read length to include in output'
+    )
 
     args = parser.parse_args()
     return args
