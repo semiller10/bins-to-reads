@@ -34,12 +34,45 @@ def main():
             os.path.splitext(os.path.basename(tmp_out))[0] + '.sorted.fasta'
         )
         subprocess.call(
-            ['seqkit', 'sort', tmp_out], 
+            ['seqkit', 'sort', '-w', '0', tmp_out], 
             stdout=tmp_out_1
         )
         subprocess.call(['mv', tmp_out_1, tmp_out])
 
+        contig_db_name = os.path.splitext(os.path.basename(row['contig_db']))
+        hdr_suffix = '_' + contig_db_name + '\n'
+        with open(tmp_out) as handle:
+            read_hdrs = [hdr.replace(hdr_suffix, '') for hdr in handle.readlines()[::2]]        
+        missing_reads = determine_missing_reads(read_hdrs)
+
     return
+
+def determine_missing_reads(read_hdrs):
+    '''
+    Find any missing members of paired reads
+    '''
+    
+    missing_read_hdrs = []
+    unpaired = True
+    previous_hdr = read_hdrs[0]
+    previous_basename = previous_hdr[:-2]
+    previous_member = previous_hdr[-1]
+    for hdr in read_hdrs[1:]:
+        if unpaired:
+            if hdr[:-2] != previous_basename:
+                if previous_member == '1':
+                    missing_reads.append(previous_basename + '.2\n')
+                else:
+                    missing_reads.append(previous_basename + '.1\n')
+            else:
+                unpaired = False
+        else:
+            unpaired = True
+            previous_hdr = read_hdrs[0]
+            previous_basename = hdr[:-2]
+            previous_member = hdr[-1]
+
+    return missing_read_hdrs
 
 def get_args():
     '''
