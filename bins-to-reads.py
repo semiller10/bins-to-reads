@@ -1,3 +1,5 @@
+#!/software/python-3.5-2017q2-el6-x86_64/bin python3
+
 '''
 Recover all reads associated with bins in Anvi'o database
 '''
