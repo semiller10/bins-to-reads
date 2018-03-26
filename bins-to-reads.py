@@ -6,6 +6,7 @@ import argparse
 import os.path
 import pandas as pd
 import subprocess
+import sys
 
 def main():
 
@@ -26,20 +27,22 @@ def main():
             '-c', row['contig_db'], 
             '-C', row['collection'], 
             '-b', row['bin'], 
-            '-o', tmp_out
+            '-o', tmp_out, 
+            row['bam']
         ])
 
         tmp_out_1 = os.path.join(
             os.path.dirname(tmp_out), 
             os.path.splitext(os.path.basename(tmp_out))[0] + '.sorted.fasta'
         )
-        subprocess.call(
-            ['seqkit', 'sort', '-w', '0', tmp_out], 
-            stdout=tmp_out_1
-        )
+        with open(tmp_out_1, 'w') as handle:
+            subprocess.call(
+                ['seqkit', 'sort', '-w', '0', tmp_out], 
+                stdout=handle
+            )
         subprocess.call(['mv', tmp_out_1, tmp_out])
 
-        contig_db_name = os.path.splitext(os.path.basename(row['contig_db']))
+        contig_db_name = os.path.splitext(os.path.basename(row['contig_db']))[0]
         hdr_suffix = '_' + contig_db_name + '\n'
         # WHEN ONLY ONE PAIRED-END READ MAPS TO THE CONTIG, 
         # RECOVER THE OTHER READ
@@ -55,13 +58,16 @@ def main():
             mapped_reads = []
             for line in handle.readlines():
                 if line[0] == '>':
-                    mapped_reads.append(line.rstrip().replace(hdr_suffix, ''))
+                    mapped_reads.append(line.replace(hdr_suffix, ''))
                 else:
                     mapped_reads.append(line.rstrip())
-        pe_reads = remove_unpaired_reads(mapped_reads, hdr_suffix)
+        pe_reads = remove_unpaired_reads(mapped_reads)
         with open(args.out, 'w') as handle:
             for line in pe_reads:
-                handle.write(line + '_' + hdr_suffix + '\n')
+                if line[0] == '>':
+                    handle.write(line + hdr_suffix)
+                else:
+                    handle.write(line + '\n')
 
     subprocess.call(['rm', tmp_out])
 
